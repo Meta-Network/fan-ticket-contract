@@ -51,12 +51,25 @@ describe("Clearing House", function () {
     const ordersOfTokenB: TransferOrder[] = await Promise.all(rest.map((i, idx) => TransferOrderConstuctor(fanpiaoB, clearingHouse, fBOwner, i.address, "2000000", idx)));
     const orders: TransferOrder[] = [...ordersOfTokenA, ...ordersOfTokenB];
     const estGas = await clearingHouse.estimateGas.handleTransferOrders(orders)
+    const estGasForNormalTransfer = await fanpiaoA.connect(fAOwner).estimateGas.transfer(fBOwner.address, '10000')
+
     console.info(`estimated Gas cost for ${orders.length} transfers: `, estGas.toString())
+    console.info(`estimated Gas cost for 1 ERC20 normal transfers: `, estGasForNormalTransfer.toString())
     await chai.expect(
       clearingHouse.handleTransferOrders(orders)
     ).to.be.not.reverted;
     chai.expect(await fanpiaoA.balanceOf(accounts[5].address)).to.be.eq(1000000)
     chai.expect(await fanpiaoB.balanceOf(accounts[8].address)).to.be.eq(2000000)
+
+    console.info(`Current GasLimit: ${(await fAOwner.provider?.getBlock('latest'))?.gasLimit.toString()}`)
+    const estGasWACC = await clearingHouse.estimateGas.handleTransferOrders([
+      ...await Promise.all(rest.map((i, idx) => TransferOrderConstuctor(fanpiaoA, clearingHouse, fAOwner, i.address, "1000000", idx + 17))),
+      ...await Promise.all(rest.map((i, idx) => TransferOrderConstuctor(fanpiaoB, clearingHouse, fBOwner, i.address, "2000000", idx + 17)))
+    ])
+    const estGasForNormalTransferWACC = await fanpiaoA.connect(fAOwner).estimateGas.transfer(accounts[5].address, '10000')
+
+    console.info(`estimated Gas cost for ${orders.length} transfers (to acc with balance already): `, estGasWACC.toString())
+    console.info(`estimated Gas cost for 1 ERC20 normal transfers (to acc with balance already): `, estGasForNormalTransferWACC.toString())
   });
 });
 
