@@ -78,7 +78,7 @@ async function TransferOrderConstuctor(token: FanTicketV2, clearingHouse: FanTic
   const deadline = getDeadline()
   const chainId = await from.getChainId();
 
-  const signature = await (from as unknown as providers.JsonRpcSigner)._signTypedData(
+  const signature = await from._signTypedData(
     {
       name: (await token.name()),
       version: "1",
