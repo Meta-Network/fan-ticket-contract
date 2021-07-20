@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract FanPiaoV2 is ERC20, ERC20Permit, AccessControl {
+contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
     address public factory;
 
     // Create a new role identifier for the minter role
