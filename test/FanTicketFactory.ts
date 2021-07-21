@@ -1,27 +1,15 @@
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { ethers } from "hardhat";
-import { Signer, utils, providers, BigNumberish } from "ethers";
-import type { FanTicketV2 } from "../typechain/FanTicketV2";
+import { utils, BigNumberish } from "ethers";
 import type { FanTicketFactory } from "../typechain/FanTicketFactory";
 import type { MetaNetworkRoleRegistry } from "../typechain/MetaNetworkRoleRegistry";
-import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Event } from "ethers";
+import { CreationPermitConstuctor } from "./utils";
 chai.use(solidity);
 
-const getDeadline = (howManySecond = 3600) => Math.floor(Date.now() / 1000) + howManySecond;
 
-type CreationPermit = {
-  name: string;
-  symbol: string;
-  owner: string;
-  tokenId: BigNumberish;
-  initialSupply: BigNumberish;
-  v: BigNumberish;
-  r: string;
-  s: string;
-};
 
 describe("FanTicket Factory", function () {
   let accounts: SignerWithAddress[];
@@ -29,8 +17,6 @@ describe("FanTicket Factory", function () {
   let registry: MetaNetworkRoleRegistry;
   let factory: FanTicketFactory;
 
-  let fanTicketA: FanTicketV2;
-  let fanTicketB: FanTicketV2;
 
   beforeEach(async function () {
     accounts = await ethers.getSigners();
@@ -95,47 +81,3 @@ describe("FanTicket Factory", function () {
   });
 });
 
-
-async function CreationPermitConstuctor(
-  factory: FanTicketFactory,
-  adminWallet: SignerWithAddress,
-  name: string,
-  symbol: string,
-  owner: string,
-  tokenId: number,
-  initialSupply: BigNumberish = 0,
-  ): Promise<CreationPermit> {
-  const chainId = await adminWallet.getChainId();
-  const signature = await adminWallet._signTypedData(
-    {
-      name: "FanTicketFactory",
-      version: "1",
-      chainId: chainId,
-      verifyingContract: factory.address,
-    },
-    {
-      CreationPermit: [
-        { name: "name", type: "string" },
-        { name: "symbol", type: "string" },
-        {
-          name: "owner",
-          type: "address",
-        },
-        { name: "initialSupply", type: "uint256" },
-        { name: "tokenId", type: "uint32" },
-      ],
-    },
-    {
-      name, symbol, owner, initialSupply: initialSupply.toString(), tokenId
-    }
-  );
-
-  const { r, s, v } = utils.splitSignature(signature);
-
-  return {
-    name, symbol, owner, initialSupply, tokenId,
-    v,
-    r,
-    s
-  }
-}
