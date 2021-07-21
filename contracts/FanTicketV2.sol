@@ -8,13 +8,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
     address public factory;
 
-    struct Signature {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        uint256 deadline;
-    }
-
     // Create a new role identifier for the minter role
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     // hash for EIP712
@@ -56,15 +49,6 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
 
         _mint(to, value);
         return true;
-    }
-
-    function transferFromBySig(
-        address sender,
-        address recipient,
-        uint256 amount,
-        Signature memory sig
-    ) public  returns (bool) {
-        return transferFromBySig(sender, recipient, amount, sig.deadline, sig.v, sig.r, sig.s);
     }
 
     function transferFromBySig(
