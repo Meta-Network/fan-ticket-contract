@@ -7,6 +7,7 @@ import type { MetaNetworkRoleRegistry } from "../typechain/MetaNetworkRoleRegist
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Event } from "ethers";
 import { CreationPermitConstuctor } from "./utils";
+import { FanTicketV2__factory } from "../typechain/factories/FanTicketV2__factory";
 chai.use(solidity);
 
 describe("FanTicket Factory", function () {
@@ -28,13 +29,52 @@ describe("FanTicket Factory", function () {
     ).deployed()) as FanTicketFactory;
   });
 
-  it("create token with permits", async function () {
+  it("created by permit and computed address are matched", async function () {
     const [_, tokenOwner] = accounts;
+    const name = "小富币";
+    const symbol = "FWC";
+    const computedAddress = await factory.computeAddress(name, symbol);
+    console.info(
+      `For Token with name '${name}' and symbol '${symbol}' will be deployed at: ${computedAddress}`
+    );
     const permit = await CreationPermitConstuctor(
       factory,
       theNetworkManager,
-      "小富币",
-      "FWC",
+      name,
+      symbol,
+      tokenOwner.address,
+      114514
+    );
+    const newTx = factory.newAPeggedToken(
+      permit.name,
+      permit.symbol,
+      permit.owner,
+      permit.initialSupply,
+      permit.tokenId,
+      permit.v,
+      permit.r,
+      permit.s
+    );
+    await chai.expect(newTx).to.be.not.reverted;
+
+    const res = await newTx;
+    const receipt = await res.wait();
+    const findNewFanTicketEvent: Event = receipt.events?.filter((item) => {
+      if (!item || !item.args) return false;
+      return item.args[1] === symbol;
+    })[0] as Event;
+    const actualDeployedAt = (findNewFanTicketEvent.args as string[])[2];
+    console.info(`Token actually deployed at: ${actualDeployedAt}`);
+    chai.expect(computedAddress).to.be.eq(actualDeployedAt);
+  });
+
+  it("fail to call init twice", async function () {
+    const [_, tokenOwner] = accounts;
+    const [ name, symbol ] = [ "小富币", "FWC" ];
+    const permit = await CreationPermitConstuctor(
+      factory,
+      theNetworkManager,
+      name, symbol,
       tokenOwner.address,
       114514
     );
@@ -50,6 +90,13 @@ describe("FanTicket Factory", function () {
         permit.s
       )
     ).to.be.not.reverted;
+    const address = await factory.computeAddress(name, symbol);
+    const token = FanTicketV2__factory.connect(address, tokenOwner);
+    // call it
+    await chai.expect(
+      token.init(tokenOwner.address, 1145141919810)
+    ).to.be.reverted;
+
   });
 
   it("refuse to create token with same symbol", async function () {
@@ -128,42 +175,4 @@ describe("FanTicket Factory", function () {
       );
   });
 
-  it("computed creation address are matched", async function () {
-    const [_, tokenOwner] = accounts;
-    const name = "小富币";
-    const symbol = "FWC";
-    const computedAddress = await factory.computeAddress(name, symbol);
-    console.info(
-      `For Token with name '${name}' and symbol '${symbol}' will be deployed at: ${computedAddress}`
-    );
-    const permit = await CreationPermitConstuctor(
-      factory,
-      theNetworkManager,
-      name,
-      symbol,
-      tokenOwner.address,
-      114514
-    );
-    const newTx = factory.newAPeggedToken(
-      permit.name,
-      permit.symbol,
-      permit.owner,
-      permit.initialSupply,
-      permit.tokenId,
-      permit.v,
-      permit.r,
-      permit.s
-    );
-    await chai.expect(newTx).to.be.not.reverted;
-
-    const res = await newTx;
-    const receipt = await res.wait();
-    const findNewFanTicketEvent: Event = receipt.events?.filter((item) => {
-      if (!item || !item.args) return false;
-      return item.args[1] === symbol;
-    })[0] as Event;
-    const actualDeployedAt = (findNewFanTicketEvent.args as string[])[2];
-    console.info(`Token actually deployed at: ${actualDeployedAt}`);
-    chai.expect(computedAddress).to.be.eq(actualDeployedAt);
-  });
 });
