@@ -7,6 +7,7 @@ import type { FanTicketFactory } from "../typechain/FanTicketFactory";
 import type { MetaNetworkRoleRegistry } from "../typechain/MetaNetworkRoleRegistry";
 import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { Event } from "ethers";
 chai.use(solidity);
 
 const getDeadline = (howManySecond = 3600) => Math.floor(Date.now() / 1000) + howManySecond;
@@ -76,7 +77,7 @@ describe("FanTicket Factory", function () {
     const symbol = 'FWC'
     const computedAddress = await factory.computeAddress(name, symbol);
     console.info(`For Token with name '${name}' and symbol '${symbol}' will be deployed at: ${computedAddress}`)
-    const permit = await CreationPermitConstuctor(factory, theNetworkManager, "小富币", 'FWC', tokenOwner.address, 114514);
+    const permit = await CreationPermitConstuctor(factory, theNetworkManager, name, symbol, tokenOwner.address, 114514);
     const newTx = factory.newAPeggedToken(permit.name, permit.symbol, permit.owner, permit.initialSupply, permit.tokenId, permit.v, permit.r, permit.s)
     await chai.expect(
       newTx
@@ -84,11 +85,14 @@ describe("FanTicket Factory", function () {
 
     const res = await newTx;
     const receipt = await res.wait()
-    // const findNewFanTicketEvent = receipt.events?.filter((item) => {
-    //   return item.args[1] === 
-    // })[0]
-    console.info('events: ', receipt.events)
-
+    const findNewFanTicketEvent: Event = receipt.events?.filter((item) => {
+      if (!item || !item.args) return false;
+      return item.args[1] === symbol;
+    })[0] as Event
+    console.info('findNewFanTicketEvent', findNewFanTicketEvent)
+    const actualDeployedAt = (findNewFanTicketEvent.args as string[])[2]
+    console.info(`Token actually deployed at: ${actualDeployedAt}`)
+    chai.expect(computedAddress).to.be.eq(actualDeployedAt)
   });
 });
 
