@@ -29,9 +29,10 @@ export async function TransferOrderConstuctor(
   from: SignerWithAddress,
   to: string,
   value: BigNumberish,
-  nonce: number
+  nonce: number,
+  validPeriod = 3600
 ): Promise<TransferOrder> {
-  const deadline = getDeadline();
+  const deadline = getDeadline(validPeriod);
   const chainId = await from.getChainId();
 
   const signature = await from._signTypedData(
