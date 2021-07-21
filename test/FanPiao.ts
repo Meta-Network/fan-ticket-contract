@@ -1,29 +1,44 @@
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { ethers } from "hardhat";
-import { Signer, utils, providers } from "ethers";
+import { utils } from "ethers";
 import type { FanTicketV2 } from "../typechain/FanTicketV2";
 import { BigNumber } from "ethers";
+import { CreationPermitConstuctor, getDeadline } from "./utils";
+import { FanTicketV2__factory } from "../typechain/factories/FanTicketV2__factory";
+import { FanTicketFactory } from "../typechain/FanTicketFactory";
+import { MetaNetworkRoleRegistry } from "../typechain/MetaNetworkRoleRegistry";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 
-const getDeadline = (howManySecond = 3600) => Math.floor(Date.now() / 1000) + howManySecond;
-
 describe("FanTicket v2", function () {
-  let accounts: Signer[];
-  let minter: Signer;
+  let accounts: SignerWithAddress[];
+  let minter: SignerWithAddress;
   let fanTicket: FanTicketV2;
 
   beforeEach(async function () {
     accounts = await ethers.getSigners();
-    minter = accounts[0];
-    const FanTicketV2 = await ethers.getContractFactory("FanTicketV2");
-    const ck = await FanTicketV2.deploy("Test FanTicket", "TFP", await minter.getAddress(), 0);
+    [ minter ] = accounts;
+    const Registry = await ethers.getContractFactory("MetaNetworkRoleRegistry");
+    const Factory = await ethers.getContractFactory("FanTicketFactory");
+    let registry = await (await Registry.deploy()).deployed() as MetaNetworkRoleRegistry;
+    let factory = await (await Factory.deploy(registry.address)).deployed() as FanTicketFactory
+    const tokenProfiles = [
+      {name:  "A Coin", symbol: 'AC', id: 1919, owner: minter.address },
+    ]
+    const creationPermits = await Promise.all(tokenProfiles.map(p => CreationPermitConstuctor(factory, minter, p.name, p.symbol, p.owner, p.id)))
+    await Promise.all(creationPermits.map(permit => 
+        factory.newAPeggedToken(permit.name, permit.symbol, permit.owner, permit.initialSupply, permit.tokenId, permit.v, permit.r, permit.s)
+      )
+    );
 
-    fanTicket = (await ck.deployed()) as FanTicketV2;
+    const [tokenAAddress] = await Promise.all(tokenProfiles.map(p => factory.computeAddress(p.name, p.symbol)));
+
+    fanTicket = FanTicketV2__factory.connect(tokenAAddress, minter)
   });
 
   it("mint as the preset minter", async function () {
-    const addr = await minter.getAddress();
+    const addr = minter.address;
     const tx = await fanTicket.mint(addr, "1145141919810000000");
     await tx.wait();
     const balance = await fanTicket.balanceOf(addr);
@@ -31,14 +46,8 @@ describe("FanTicket v2", function () {
   });
 
   it("fail to mint as non minter", async function () {
-    const someoneElse = await accounts[2].getAddress();
+    const someoneElse = accounts[2].address;
     await chai.expect(fanTicket.connect(accounts[2]).mint(someoneElse, "1145141919810000000")).to.be.reverted;
-  });
-
-  it("fail minting if acting as non-minter", async function () {
-    const addr = await minter.getAddress();
-    await chai.expect(fanTicket.connect(accounts[1]).mint(addr, "1145141919810000000")).to
-      .reverted;
   });
 
   // EIP2612 ERC20 Premit related
@@ -47,10 +56,10 @@ describe("FanTicket v2", function () {
     const chainId = await minter.getChainId();
     const deadline = getDeadline()
     const targetAmount = BigNumber.from("114514191981000000")
-    const tokenOwner = await theOwner.getAddress();
+    const tokenOwner =  theOwner.address;
     await fanTicket.mint(tokenOwner, targetAmount);
 
-    const spender = await theGasPayer.getAddress();
+    const spender =  theGasPayer.address;
     const msg = {
       owner: tokenOwner,
       spender,
@@ -59,7 +68,7 @@ describe("FanTicket v2", function () {
       deadline,
     };
 
-    const signature = await (theOwner as providers.JsonRpcSigner)._signTypedData(
+    const signature = await theOwner._signTypedData(
       {
         name: (await fanTicket.name()),
         version: "1",
@@ -89,7 +98,7 @@ describe("FanTicket v2", function () {
     ).to.be.not.reverted;
     
     await chai.expect(
-      fanTicket.connect(theGasPayer).transferFrom(tokenOwner, await theReceiver.getAddress(), targetAmount)
+      fanTicket.connect(theGasPayer).transferFrom(tokenOwner, await theReceiver.address, targetAmount)
     ).to.be.not.reverted; 
   });
 
@@ -99,10 +108,10 @@ describe("FanTicket v2", function () {
     // deadline is 1 hours ago from now
     const deadline = getDeadline(-3600)
     const targetAmount = BigNumber.from("114514191981000000")
-    const tokenOwner = await theOwner.getAddress();
+    const tokenOwner =  theOwner.address;
     await fanTicket.mint(tokenOwner, targetAmount);
 
-    const spender = await theGasPayer.getAddress();
+    const spender =  theGasPayer.address;
     const msg = {
       owner: tokenOwner,
       spender,
@@ -111,7 +120,7 @@ describe("FanTicket v2", function () {
       deadline,
     };
 
-    const signature = await (theOwner as providers.JsonRpcSigner)._signTypedData(
+    const signature = await theOwner._signTypedData(
       {
         name: (await fanTicket.name()),
         version: "1",
