@@ -70,14 +70,14 @@ contract FanTicketFactory is Ownable, EIP712 {
     function _newFanTicket(
         string memory _name,
         string memory _symbol,
+        address owner,
         uint256 initialSupply
     ) internal returns(address newToken) {
         FanTicketV2 _token = new FanTicketV2{salt: salt}(
             _name,
-            _symbol,
-            msg.sender,
-            initialSupply
+            _symbol
         );
+        _token.init(owner, initialSupply);
         newToken = address(_token);
         symbolToAddress[_symbol] = newToken;
         emit NewFanTicket(_name, _symbol, newToken);
@@ -112,7 +112,7 @@ contract FanTicketFactory is Ownable, EIP712 {
             "FanTicketFactory::INVALID_SIGNATURE: The signer is not admin."
         );
         // Create it if signature was right
-        address newTokenAddress = _newFanTicket(name, symbol, initialSupply);
+        address newTokenAddress = _newFanTicket(name, symbol, owner, initialSupply);
         tokenIdToAddress[tokenId] = newTokenAddress;
     }
     function tokenCreationCode() public view returns (bytes memory) {

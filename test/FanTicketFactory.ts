@@ -89,7 +89,6 @@ describe("FanTicket Factory", function () {
       if (!item || !item.args) return false;
       return item.args[1] === symbol;
     })[0] as Event
-    console.info('findNewFanTicketEvent', findNewFanTicketEvent)
     const actualDeployedAt = (findNewFanTicketEvent.args as string[])[2]
     console.info(`Token actually deployed at: ${actualDeployedAt}`)
     chai.expect(computedAddress).to.be.eq(actualDeployedAt)

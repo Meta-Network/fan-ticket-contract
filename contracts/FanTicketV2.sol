@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
     address public factory;
-
+    bool initialized = false;
     // Create a new role identifier for the minter role
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     // hash for EIP712
@@ -16,8 +16,13 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
     bytes32 public constant _TRANFER_TYPEHASH =
         keccak256("Transfer(address from,address to,uint256 value,uint256 nonce,uint256 deadline)");
 
-    constructor(string memory name, string memory symbol, address _owner, uint256 initialSupply) ERC20(name, symbol) ERC20Permit(name) {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) {
         factory = msg.sender;
+    }
+
+    function init(address _owner, uint256 initialSupply) public {
+        require(!initialized, "already initialized");
+        require(factory == msg.sender, "Init should be called from factory contract.");
         _setupRole(MINTER_ROLE, _owner);
         _mint(_owner, initialSupply);
     }
