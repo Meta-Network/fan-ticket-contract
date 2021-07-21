@@ -17,7 +17,7 @@ describe("FanTicket v2", function () {
     accounts = await ethers.getSigners();
     minter = accounts[0];
     const FanTicketV2 = await ethers.getContractFactory("FanTicketV2");
-    const ck = await FanTicketV2.deploy("Test FanTicket", "TFP", await minter.getAddress());
+    const ck = await FanTicketV2.deploy("Test FanTicket", "TFP", await minter.getAddress(), 0);
 
     fanTicket = (await ck.deployed()) as FanTicketV2;
   });

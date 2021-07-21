@@ -51,8 +51,8 @@ describe("Clearing House", function () {
     minter = accounts[0];
     const FanTicketV2 = await ethers.getContractFactory("FanTicketV2");
     const ClearingHouse = await ethers.getContractFactory("FanTicketClearingHouse");
-    const fa = await FanTicketV2.deploy("Test FanTicket A", "TFPA", minter.address);
-    const fb = await FanTicketV2.deploy("Test FanTicket A", "TFPB", minter.address);
+    const fa = await FanTicketV2.deploy("Test FanTicket A", "TFPA", minter.address, 0);
+    const fb = await FanTicketV2.deploy("Test FanTicket A", "TFPB", minter.address, 0);
 
     fanTicketA = (await fa.deployed()) as FanTicketV2;
     fanTicketB = (await fb.deployed()) as FanTicketV2;
