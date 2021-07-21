@@ -1,47 +1,22 @@
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { ethers } from "hardhat";
-import { Signer, utils, providers, BigNumberish } from "ethers";
 import type { FanTicketV2 } from "../typechain/FanTicketV2";
+import { FanTicketV2__factory } from "../typechain/factories/FanTicketV2__factory";
 import type { FanTicketClearingHouse } from "../typechain/FanTicketClearingHouse";
-import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { MintOrderConstuctor, TransferOrderConstuctor, RandomOrderConstuctor, CreationPermitConstuctor } from "./utils";
+import { MintOrder, TransactionOrder } from "./typing";
+import { FanTicketFactory } from "../typechain/FanTicketFactory";
+import { MetaNetworkRoleRegistry } from "../typechain/MetaNetworkRoleRegistry";
 chai.use(solidity);
-
-const getDeadline = (howManySecond = 3600) => Math.floor(Date.now() / 1000) + howManySecond;
-
-
-type TransferOrder = {
-  token: string;
-  from: string;
-  to: string;
-  value: BigNumberish;
-  isMint: false;
-  deadline: BigNumberish;
-  v: BigNumberish;
-  r: string;
-  s: string;
-};
-
-
-type MintOrder = {
-  token: string;
-  from: string;
-  to: string;
-  value: BigNumberish;
-  isMint: true;
-  deadline: BigNumberish;
-  v: BigNumberish;
-  r: string;
-  s: string;
-};
-
-type TransactionOrder = TransferOrder | MintOrder;
 
 
 describe("Clearing House", function () {
   let accounts: SignerWithAddress[];
   let minter: SignerWithAddress;
+  let registry: MetaNetworkRoleRegistry;
+  let factory: FanTicketFactory;
   let fanTicketA: FanTicketV2;
   let fanTicketB: FanTicketV2;
   let clearingHouse: FanTicketClearingHouse;
@@ -49,13 +24,26 @@ describe("Clearing House", function () {
   beforeEach(async function () {
     accounts = await ethers.getSigners();
     minter = accounts[0];
-    const FanTicketV2 = await ethers.getContractFactory("FanTicketV2");
+    const Registry = await ethers.getContractFactory("MetaNetworkRoleRegistry");
+    const Factory = await ethers.getContractFactory("FanTicketFactory");
+    registry = await (await Registry.deploy()).deployed() as MetaNetworkRoleRegistry;
+    factory = await (await Factory.deploy(registry.address)).deployed() as FanTicketFactory
     const ClearingHouse = await ethers.getContractFactory("FanTicketClearingHouse");
-    const fa = await FanTicketV2.deploy("Test FanTicket A", "TFPA", minter.address, 0);
-    const fb = await FanTicketV2.deploy("Test FanTicket A", "TFPB", minter.address, 0);
+    const [ _, tokenAOwner, tokenBOwner ] = accounts;
+    const tokenProfiles = [
+      {name:  "A Coin", symbol: 'AC', id: 1919, owner: tokenAOwner.address },
+      {name:  "B Coin", symbol: 'BC', id: 810, owner: tokenBOwner.address },
+    ]
+    const creationPermits = await Promise.all(tokenProfiles.map(p => CreationPermitConstuctor(factory, minter, p.name, p.symbol, p.owner, p.id)))
+    await Promise.all(creationPermits.map(permit => 
+        factory.newAPeggedToken(permit.name, permit.symbol, permit.owner, permit.initialSupply, permit.tokenId, permit.v, permit.r, permit.s)
+      )
+    );
 
-    fanTicketA = (await fa.deployed()) as FanTicketV2;
-    fanTicketB = (await fb.deployed()) as FanTicketV2;
+    const [tokenAAddress, tokenBAddress] = await Promise.all(tokenProfiles.map(p => factory.computeAddress(p.name, p.symbol)));
+
+    fanTicketA = FanTicketV2__factory.connect(tokenAAddress, tokenAOwner)
+    fanTicketB = FanTicketV2__factory.connect(tokenBAddress, tokenBOwner)
     clearingHouse = await (await ClearingHouse.deploy()).deployed() as FanTicketClearingHouse
     await fanTicketA.mint(accounts[1].address, "1000000000000000000000000000000000000000000")
     await fanTicketB.mint(accounts[2].address, "1000000000000000000000000000000000000000000")
@@ -64,7 +52,6 @@ describe("Clearing House", function () {
   it("mint with permits", async function () {
     const [ _, fAOwner, fBOwner, ...rest ] = accounts;
 
-    
     const ordersOfTokenA: MintOrder[] = await Promise.all(rest.map((i, idx) => MintOrderConstuctor(fanTicketA, fAOwner, i.address, "1000000", idx)));
     const ordersOfTokenB: MintOrder[] = await Promise.all(rest.map((i, idx) => MintOrderConstuctor(fanTicketB, fBOwner, i.address, "2000000", idx)));
     const orders: TransactionOrder[] = [...ordersOfTokenA, ...ordersOfTokenB];
@@ -119,103 +106,3 @@ describe("Clearing House", function () {
   });
 });
 
-
-function RandomOrderConstuctor(token: FanTicketV2, from: SignerWithAddress, to: string, value: BigNumberish, nonce: number): Promise<TransactionOrder> {
-  const whichFn = nonce % 2 === 0 ? TransferOrderConstuctor : MintOrderConstuctor;
-  return whichFn(token, from, to, value, nonce)
-}
-
-async function TransferOrderConstuctor(token: FanTicketV2, from: SignerWithAddress, to: string, value: BigNumberish, nonce: number): Promise<TransferOrder> {
-  const deadline = getDeadline()
-  const chainId = await from.getChainId();
-
-  const signature = await from._signTypedData(
-    {
-      name: (await token.name()),
-      version: "1",
-      chainId: chainId,
-      verifyingContract: token.address,
-    },
-    {
-      Transfer: [
-        { name: "from", type: "address" },
-        { name: "to", type: "address" },
-        {
-          name: "value",
-          type: "uint256",
-        },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" },
-      ],
-    },
-    {
-      from: from.address,
-      to,
-      value,
-      nonce,
-      deadline
-    }
-  );
-
-  const { r, s, v } = utils.splitSignature(signature);
-
-  return {
-    token: token.address,
-    from: from.address,
-    to,
-    value,
-    isMint: false,
-    deadline,
-    v,
-    r,
-    s
-  }
-}
-
-
-async function MintOrderConstuctor(token: FanTicketV2, from: SignerWithAddress, to: string, value: BigNumberish, nonce: number): Promise<MintOrder> {
-  const deadline = getDeadline()
-  const chainId = await from.getChainId();
-
-  const signature = await from._signTypedData(
-    {
-      name: (await token.name()),
-      version: "1",
-      chainId: chainId,
-      verifyingContract: token.address,
-    },
-    {
-      Mint: [
-        { name: "minter", type: "address" },
-        { name: "to", type: "address" },
-        {
-          name: "value",
-          type: "uint256",
-        },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" },
-      ],
-    },
-    {
-      minter: from.address,
-      to,
-      value,
-      nonce,
-      deadline
-    }
-  );
-
-  const { r, s, v } = utils.splitSignature(signature);
-
-  return {
-    token: token.address,
-    from: from.address,
-    to,
-    value,
-    isMint: true,
-    deadline,
-    v,
-    r,
-    s
-  }
-}
