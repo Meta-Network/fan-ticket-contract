@@ -16,9 +16,10 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
     bytes32 public constant _TRANFER_TYPEHASH =
         keccak256("Transfer(address from,address to,uint256 value,uint256 nonce,uint256 deadline)");
 
-    constructor(string memory name, string memory symbol, address _owner) ERC20(name, symbol) ERC20Permit(name) {
+    constructor(string memory name, string memory symbol, address _owner, uint256 initialSupply) ERC20(name, symbol) ERC20Permit(name) {
         factory = msg.sender;
         _setupRole(MINTER_ROLE, _owner);
+        _mint(_owner, initialSupply);
     }
 
     modifier isSignatureNotDead(uint256 deadline) {

@@ -22,7 +22,7 @@ contract FanTicketFactory is Ownable, EIP712 {
     bytes32 public constant salt = keccak256("Meta Network FanTicket");
     bytes32 public constant NETWORK_ADMIN_ROLE = keccak256("NETWORK_ADMIN_ROLE");
     bytes32 public constant CREATION_PERMIT_TYPEHASH =
-        keccak256("CreationPermit(string name,string symbol,address owner,uint32 tokenId)");
+        keccak256("CreationPermit(string name,string symbol,address owner,uint256 initialSupply,uint32 tokenId)");
 
     event NewFanTicket(
         string indexed symbol,
@@ -69,12 +69,14 @@ contract FanTicketFactory is Ownable, EIP712 {
 
     function _newFanTicket(
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint256 initialSupply
     ) internal returns(address newToken) {
         FanTicketV2 _token = new FanTicketV2{salt: salt}(
             _name,
             _symbol,
-            msg.sender
+            msg.sender,
+            initialSupply
         );
         newToken = address(_token);
         symbolToAddress[_symbol] = newToken;
@@ -85,6 +87,7 @@ contract FanTicketFactory is Ownable, EIP712 {
         string calldata name,
         string calldata symbol,
         address owner,
+        uint256 initialSupply,
         uint32 tokenId,
         uint8 v,
         bytes32 r,
@@ -97,6 +100,7 @@ contract FanTicketFactory is Ownable, EIP712 {
             keccak256(bytes(name)),
             keccak256(bytes(symbol)),
             owner,
+            initialSupply,
             tokenId
         )));
         address signer = ECDSA.recover(digest, v, r, s);
@@ -108,7 +112,7 @@ contract FanTicketFactory is Ownable, EIP712 {
             "FanTicketFactory::INVALID_SIGNATURE: The signer is not admin."
         );
         // Create it if signature was right
-        address newTokenAddress = _newFanTicket(name, symbol);
+        address newTokenAddress = _newFanTicket(name, symbol, initialSupply);
         tokenIdToAddress[tokenId] = newTokenAddress;
     }
     function tokenCreationCode() public view returns (bytes memory) {
