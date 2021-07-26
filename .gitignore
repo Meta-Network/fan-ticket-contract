@@ -5,3 +5,6 @@ cache
 artifacts
 
 typechain
+
+.env
+.env.*
