@@ -1,10 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import { FanTicketV2 } from "./FanTicketV2.sol";
+import {FanTicketV2} from "./FanTicketV2.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
-
+import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract FanTicketFactory is Ownable, EIP712 {
     /**
@@ -20,9 +19,12 @@ contract FanTicketFactory is Ownable, EIP712 {
     mapping(string => address) public symbolToAddress;
     mapping(uint32 => address) public tokenIdToAddress;
     bytes32 public constant salt = keccak256("Meta Network FanTicket");
-    bytes32 public constant NETWORK_ADMIN_ROLE = keccak256("NETWORK_ADMIN_ROLE");
+    bytes32 public constant NETWORK_ADMIN_ROLE =
+        keccak256("NETWORK_ADMIN_ROLE");
     bytes32 public constant CREATION_PERMIT_TYPEHASH =
-        keccak256("CreationPermit(string name,string symbol,address owner,uint256 initialSupply,uint32 tokenId)");
+        keccak256(
+            "CreationPermit(string name,string symbol,address owner,uint256 initialSupply,uint32 tokenId)"
+        );
 
     event NewFanTicket(
         string indexed symbol,
@@ -53,18 +55,14 @@ contract FanTicketFactory is Ownable, EIP712 {
         /// can be pre-computed. It is just there for illustration.
         /// You actually only need ``new D{salt: salt}(arg)``.
         bytes32 digest = keccak256(
-                    abi.encodePacked(
-                        hex"ff",
-                        address(this),
-                        salt,
-                        keccak256(computeCreationCodeWithArgs(_name, _symbol))
-                    )
-        );
-        predictedAddress = address(
-            uint160(
-                uint256(digest)
+            abi.encodePacked(
+                hex"ff",
+                address(this),
+                salt,
+                keccak256(computeCreationCodeWithArgs(_name, _symbol))
             )
         );
+        predictedAddress = address(uint160(uint256(digest)));
     }
 
     function _newFanTicket(
@@ -72,15 +70,12 @@ contract FanTicketFactory is Ownable, EIP712 {
         string memory _symbol,
         address owner,
         uint256 initialSupply
-    ) internal returns(address newToken) {
-        FanTicketV2 _token = new FanTicketV2{salt: salt}(
-            _name,
-            _symbol
-        );
+    ) internal returns (address newToken) {
+        FanTicketV2 _token = new FanTicketV2{salt: salt}(_name, _symbol);
         _token.init(owner, initialSupply);
         newToken = address(_token);
         symbolToAddress[_symbol] = newToken;
-        emit NewFanTicket(_name, _symbol, newToken);
+        emit NewFanTicket(_symbol, _name, newToken);
     }
 
     function newAPeggedToken(
@@ -93,28 +88,43 @@ contract FanTicketFactory is Ownable, EIP712 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(symbolToAddress[symbol] == address(0), "Token have been created on this factory");
+        require(
+            symbolToAddress[symbol] == address(0),
+            "Token have been created on this factory"
+        );
 
-        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
-            CREATION_PERMIT_TYPEHASH,
-            keccak256(bytes(name)),
-            keccak256(bytes(symbol)),
-            owner,
-            initialSupply,
-            tokenId
-        )));
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    CREATION_PERMIT_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(symbol)),
+                    owner,
+                    initialSupply,
+                    tokenId
+                )
+            )
+        );
         address signer = ECDSA.recover(digest, v, r, s);
-        bool isPermitSignerAdmin =
-            IAccessControl(managerRegistry).hasRole(NETWORK_ADMIN_ROLE, signer);
+        bool isPermitSignerAdmin = IAccessControl(managerRegistry).hasRole(
+            NETWORK_ADMIN_ROLE,
+            signer
+        );
         require(
             // Permit signer must be the admin in the manager Registry
             isPermitSignerAdmin,
             "FanTicketFactory::INVALID_SIGNATURE: The signer is not admin."
         );
         // Create it if signature was right
-        address newTokenAddress = _newFanTicket(name, symbol, owner, initialSupply);
+        address newTokenAddress = _newFanTicket(
+            name,
+            symbol,
+            owner,
+            initialSupply
+        );
         tokenIdToAddress[tokenId] = newTokenAddress;
     }
+
     function tokenCreationCode() public view returns (bytes memory) {
         return type(FanTicketV2).creationCode;
     }
