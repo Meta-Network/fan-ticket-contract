@@ -44,7 +44,7 @@ describe("FanTicket v2", function () {
     );
     await Promise.all(
       creationPermits.map((permit) =>
-        factory.newAPeggedToken(
+        factory.newFanTicket(
           permit.name,
           permit.symbol,
           permit.owner,

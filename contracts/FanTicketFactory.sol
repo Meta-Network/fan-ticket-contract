@@ -78,7 +78,7 @@ contract FanTicketFactory is Ownable, EIP712 {
         emit NewFanTicket(_symbol, _name, newToken);
     }
 
-    function newAPeggedToken(
+    function newFanTicket(
         string calldata name,
         string calldata symbol,
         address owner,

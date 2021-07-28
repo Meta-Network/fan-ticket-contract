@@ -5,7 +5,7 @@ export type TransferOrder = {
   from: string;
   to: string;
   value: BigNumberish;
-  isMint: false;
+  _type: number;
   deadline: BigNumberish;
   v: BigNumberish;
   r: string;
@@ -17,7 +17,7 @@ export type MintOrder = {
   from: string;
   to: string;
   value: BigNumberish;
-  isMint: true;
+  _type: number;
   deadline: BigNumberish;
   v: BigNumberish;
   r: string;

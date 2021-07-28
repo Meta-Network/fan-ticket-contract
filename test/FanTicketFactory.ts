@@ -45,7 +45,7 @@ describe("FanTicket Factory", function () {
       tokenOwner.address,
       114514
     );
-    const newTx = factory.newAPeggedToken(
+    const newTx = factory.newFanTicket(
       permit.name,
       permit.symbol,
       permit.owner,
@@ -61,7 +61,7 @@ describe("FanTicket Factory", function () {
     const receipt = await res.wait();
     const findNewFanTicketEvent: Event = receipt.events?.filter((item) => {
       if (!item || !item.args) return false;
-      return item.args[1] === symbol;
+      return item.args[1] === name;
     })[0] as Event;
     const actualDeployedAt = (findNewFanTicketEvent.args as string[])[2];
     console.info(`Token actually deployed at: ${actualDeployedAt}`);
@@ -79,7 +79,7 @@ describe("FanTicket Factory", function () {
       114514
     );
     await chai.expect(
-      factory.newAPeggedToken(
+      factory.newFanTicket(
         permit.name,
         permit.symbol,
         permit.owner,
@@ -110,7 +110,7 @@ describe("FanTicket Factory", function () {
       114514
     );
     await chai.expect(
-      factory.newAPeggedToken(
+      factory.newFanTicket(
         permit.name,
         permit.symbol,
         permit.owner,
@@ -132,7 +132,7 @@ describe("FanTicket Factory", function () {
     );
     await chai
       .expect(
-        factory.newAPeggedToken(
+        factory.newFanTicket(
           permitB.name,
           permitB.symbol,
           permitB.owner,
@@ -159,7 +159,7 @@ describe("FanTicket Factory", function () {
 
     await chai
       .expect(
-        factory.newAPeggedToken(
+        factory.newFanTicket(
           permit.name,
           permit.symbol,
           permit.owner,

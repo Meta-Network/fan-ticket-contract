@@ -58,7 +58,7 @@ describe("Clearing House", function () {
     );
     await Promise.all(
       creationPermits.map((permit) =>
-        factory.newAPeggedToken(
+        factory.newFanTicket(
           permit.name,
           permit.symbol,
           permit.owner,
