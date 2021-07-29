@@ -51,7 +51,9 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
+
         require(signer == minter, "ERC20Permit::mint: invalid signature");
+        require(hasRole(MINTER_ROLE, signer), "mint: you are not the minter");
 
         _mint(to, value);
         return true;
