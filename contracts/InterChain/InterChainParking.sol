@@ -4,28 +4,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../interfaces/IFanTicketV2.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import { IInterChainParking } from "../interfaces/IInterChainParking.sol";
 
-interface IInterChainParking {
-    function deposit(
-        address token,
-        address sender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    function withdraw(
-        address token,
-        address who,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-}
 
 contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
     mapping(address => mapping(address => uint256))
