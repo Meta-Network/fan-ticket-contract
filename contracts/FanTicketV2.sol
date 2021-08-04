@@ -3,9 +3,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./interfaces/IFanTicketV2.sol";
 
-contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
+
+contract FanTicketV2 is IFanTicketV2, ERC20, ERC20Permit, AccessControl {
     address public factory;
     bool initialized = false;
     // Create a new role identifier for the minter role
@@ -32,7 +33,7 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
         _;
     }
 
-    function mint(address to, uint256 value) public onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 value) public override onlyRole(MINTER_ROLE) {
         _mint(to, value);
     }
 
@@ -44,7 +45,7 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public isSignatureNotDead(deadline) returns (bool) {
+    ) public override isSignatureNotDead(deadline) returns (bool) {
         // reuse the `nonce` property, as nonce only associated with the signer
         bytes32 structHash = keccak256(abi.encode(_MINT_PERMIT_TYPEHASH, minter, to, value, _useNonce(minter), deadline));
 
@@ -67,7 +68,7 @@ contract FanTicketV2 is ERC20, ERC20Permit, AccessControl {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public isSignatureNotDead(deadline) returns (bool) {
+    ) public override isSignatureNotDead(deadline) returns (bool) {
         // reuse the `nonce` property, as nonce only associated with the signer
         bytes32 structHash = keccak256(
             abi.encode(_TRANFER_TYPEHASH, sender, recipient, amount, _useNonce(sender), deadline)
