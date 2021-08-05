@@ -21,7 +21,7 @@ contract FanTicketV2 is IFanTicketV2, ERC20, ERC20Permit, AccessControl {
         factory = msg.sender;
     }
 
-    function init(address _owner, uint256 initialSupply) public {
+    function init(address _owner, uint256 initialSupply) public virtual {
         require(!initialized, "already initialized");
         require(factory == msg.sender, "Init should be called from factory contract.");
         _setupRole(MINTER_ROLE, _owner);
@@ -45,7 +45,7 @@ contract FanTicketV2 is IFanTicketV2, ERC20, ERC20Permit, AccessControl {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public override isSignatureNotDead(deadline) returns (bool) {
+    ) public virtual override isSignatureNotDead(deadline) returns (bool) {
         // reuse the `nonce` property, as nonce only associated with the signer
         bytes32 structHash = keccak256(abi.encode(_MINT_PERMIT_TYPEHASH, minter, to, value, _useNonce(minter), deadline));
 
