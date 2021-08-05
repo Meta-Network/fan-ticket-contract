@@ -22,6 +22,7 @@ contract MetaNetworkRoleRegistry is AccessControl {
     event HandoverAdmin(address from, address to);
 
     constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(NETWORK_ADMIN_ROLE, msg.sender);
     }
 
