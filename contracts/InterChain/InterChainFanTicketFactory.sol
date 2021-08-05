@@ -79,8 +79,7 @@ contract InterChainFanTicketFactory is Ownable, EIP712 {
         address owner
     ) internal returns (address newToken) {
         InterChainFanTicket _token = new InterChainFanTicket{salt: salt}(_name, _symbol);
-        _token.init(owner, 0);
-        _token.setManagerRegistry(managerRegistry);
+        _token.init(managerRegistry);
         newToken = address(_token);
         symbolToAddress[_symbol] = newToken;
         emit NewFanTicket(_symbol, _name, newToken);

@@ -1,29 +1,47 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "../FanTicketV2.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "../interfaces/IFanTicketV2.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract InterChainFanTicket is FanTicketV2 {
+contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
+    address public factory;
+    bool initialized = false;
+
     bytes32 public constant NETWORK_ADMIN_ROLE =
         keccak256("NETWORK_ADMIN_ROLE");
+
+    // hash for EIP712
+    bytes32 public constant _MINT_PERMIT_TYPEHASH =
+        keccak256("Mint(address minter,address to,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant _TRANFER_TYPEHASH =
+        keccak256("Transfer(address from,address to,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant _BURN_PERMIT_TYPEHASH =
         keccak256("Burn(address from,uint256 value,uint256 nonce,uint256 deadline)");
 
+    event InterChainFanTicketMint(address indexed who, uint256 value);
     event InterChainFanTicketBurnt(address indexed who, uint256 value);
 
     address public managerRegistry;
 
-    constructor(string memory name, string memory symbol) FanTicketV2(name, symbol) {}
-
-    function init(address _interChainOperator, uint256 _usedForOverride) public override {
-        require(!initialized, "init: already initialized");
-        require(factory == msg.sender, "Init should be called from factory contract.");
-        _setupRole(MINTER_ROLE, _interChainOperator);
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) {
+        factory = msg.sender;
     }
 
-    function setManagerRegistry(address _managerRegistry) public {
-        require(managerRegistry == address(0), "managerRegistry was set");
+    function init(address _managerRegistry) public {
+        require(!initialized, "init: already initialized");
+        require(factory == msg.sender, "Init should be called from factory contract.");
         managerRegistry = _managerRegistry;
+    }
+
+    modifier isSignatureNotDead(uint256 deadline) {
+        require(block.timestamp <= deadline, "ERC20Permit::signature expired deadline");
+        _;
+    }
+
+    function mint(address to, uint256 value) external override {
+        revert("Disabled direct mint for InterChainFanTicket");
     }
 
     function burnBySig(
@@ -45,6 +63,7 @@ contract InterChainFanTicket is FanTicketV2 {
         require(signer == from, "InterChainFanPiao::burnBySig: invalid signature");
         _burn(from, amount);
 
+        emit InterChainFanTicketBurnt(from, amount);
         return true;
     }
 
@@ -75,6 +94,31 @@ contract InterChainFanTicket is FanTicketV2 {
 
 
         _mint(to, value);
+
+        emit InterChainFanTicketMint(to, value);
+        return true;
+    }
+
+    function transferFromBySig(
+        address sender,
+        address recipient,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public override isSignatureNotDead(deadline) returns (bool) {
+        // reuse the `nonce` property, as nonce only associated with the signer
+        bytes32 structHash = keccak256(
+            abi.encode(_TRANFER_TYPEHASH, sender, recipient, amount, _useNonce(sender), deadline)
+        );
+
+        bytes32 hash = _hashTypedDataV4(structHash);
+
+        address signer = ECDSA.recover(hash, v, r, s);
+        require(signer == sender, "ERC20Permit::transferFrom: invalid signature");
+        _transfer(sender, recipient, amount);
+
         return true;
     }
 }
