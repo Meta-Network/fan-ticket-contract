@@ -75,8 +75,7 @@ contract InterChainFanTicketFactory is Ownable, EIP712 {
 
     function _newFanTicket(
         string memory _name,
-        string memory _symbol,
-        address owner
+        string memory _symbol
     ) internal returns (address newToken) {
         InterChainFanTicket _token = new InterChainFanTicket{salt: salt}(_name, _symbol);
         _token.init(managerRegistry);
@@ -88,7 +87,6 @@ contract InterChainFanTicketFactory is Ownable, EIP712 {
     function newFanTicket(
         string calldata name,
         string calldata symbol,
-        address owner,
         uint32 tokenId,
         uint256 originChainId,
         address originAddress,
@@ -108,7 +106,6 @@ contract InterChainFanTicketFactory is Ownable, EIP712 {
                     originAddress,
                     keccak256(bytes(name)),
                     keccak256(bytes(symbol)),
-                    owner,
                     tokenId,
                     originChainId
                 )
@@ -127,8 +124,7 @@ contract InterChainFanTicketFactory is Ownable, EIP712 {
         // Create it if signature was right
         address newTokenAddress = _newFanTicket(
             name,
-            symbol,
-            owner
+            symbol
         );
         tokenIdToAddress[tokenId] = newTokenAddress;
         tokenIdToOriginChainId[tokenId] = originChainId;
