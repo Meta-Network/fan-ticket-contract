@@ -14,7 +14,7 @@ contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
 
     bytes32 public constant _WITHDRAW_PERMIT_TYPEHASH =
         keccak256(
-            "Withdraw(address token,address who,uint256 value,uint256 nonce,uint256 deadline)"
+            "Withdraw(address token,address to,uint256 value,uint256 nonce,uint256 deadline)"
         );
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -63,6 +63,7 @@ contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
                     token,
                     who,
                     value,
+                    withdrawNonces[token][who]++,
                     deadline
                 )
             )

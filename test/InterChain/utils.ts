@@ -8,6 +8,7 @@ import {
   MintOrder,
   InterChainCreationPermit,
 } from "./typing";
+import { InterChainParking } from "../../typechain/InterChainParking";
 
 export const getDeadline = (howManySecond = 3600) =>
   Math.floor(Date.now() / 1000) + howManySecond;
@@ -229,6 +230,60 @@ export async function CreationPermitConstuctor(
     symbol,
     tokenId,
     originChainId: BigNumber.from(originChainId),
+    v,
+    r,
+    s,
+  };
+}
+
+
+export async function ParkingWithdrawConstuctor(
+  parking: InterChainParking,
+  token: string,
+  admin: SignerWithAddress,
+  who: string,
+  value: BigNumberish,
+  nonce: number
+) {
+  const deadline = getDeadline();
+  const chainId = await admin.getChainId();
+
+  const signature = await admin._signTypedData(
+    {
+      name: "InterChainParking",
+      version: "1",
+      chainId: chainId,
+      verifyingContract: parking.address,
+    },
+    {
+      Withdraw: [
+        { name: "token", type: "address" },
+        { name: "who", type: "address" },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    {
+      token,
+      who,
+      value,
+      nonce,
+      deadline,
+    }
+  );
+
+  const { r, s, v } = utils.splitSignature(signature);
+
+  return {
+    token,
+    who,
+    value,
+    nonce,
+    deadline,
     v,
     r,
     s,
