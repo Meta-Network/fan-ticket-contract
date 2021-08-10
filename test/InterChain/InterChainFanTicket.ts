@@ -93,7 +93,7 @@ describe("InterChain FanTicket v2", function () {
   it("Mint with good Permit", async function () {
     const [_a, _, theReceiver] = accounts;
     const targetAmount = BigNumber.from("114514191981000000");
-    const nonce = await fanTicket.nonces(networkAdmin.address);
+    const nonce = await fanTicket.mintNonces(theReceiver.address);
     const permit = await MintOrderConstuctor(fanTicket, networkAdmin, theReceiver.address, targetAmount, nonce.toNumber())
 
     await chai.expect(
