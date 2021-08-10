@@ -12,6 +12,9 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
     bytes32 public constant NETWORK_ADMIN_ROLE =
         keccak256("NETWORK_ADMIN_ROLE");
 
+    // to => nonce
+    mapping(address => uint256) public mintNonces;
+
     // hash for EIP712
     bytes32 public constant _MINT_PERMIT_TYPEHASH =
         keccak256("Mint(address minter,address to,uint256 value,uint256 nonce,uint256 deadline)");
@@ -80,7 +83,7 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
         bytes32 s
     ) public override isSignatureNotDead(deadline) returns (bool) {
         // reuse the `nonce` property, as nonce only associated with the signer
-        bytes32 structHash = keccak256(abi.encode(_MINT_PERMIT_TYPEHASH, minter, to, value, _useNonce(minter), deadline));
+        bytes32 structHash = keccak256(abi.encode(_MINT_PERMIT_TYPEHASH, minter, to, value, mintNonces[to]++, deadline));
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
