@@ -1,11 +1,13 @@
 import { promises as fs } from 'fs';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
+import { InterChainParking__factory } from '../typechain/factories/InterChainParking__factory';
 import { MetaNetworkRoleRegistry__factory } from '../typechain/factories/MetaNetworkRoleRegistry__factory';
 import { FanTicketFactory__factory } from '../typechain/factories/FanTicketFactory__factory';
 import { FanTicketClearingHouse__factory } from '../typechain/factories/FanTicketClearingHouse__factory';
 import { utils } from 'ethers';
 import { config as loadEnvConfig } from "dotenv";
+import { BigNumberish } from 'ethers';
 
 // require('dotenv').config({})
 
@@ -13,6 +15,19 @@ type AddressBook = {
   Registry?: string;
   Factory?: string;
   ClearingHouse?: string;
+  Parking?: string;
+}
+
+async function deployInterChainParking(wallet: Wallet, gasPrice: BigNumberish, networkOperator: string) {
+  // Parking Contract
+  console.log('Deploying Parking...');
+  const parkingDeployTx = await new InterChainParking__factory(
+    wallet
+  ).deploy(networkOperator, { gasPrice });
+  console.log(`Deploy TX: ${parkingDeployTx.deployTransaction.hash}`);
+  await parkingDeployTx.deployed();
+  console.log(`Parking deployed at ${parkingDeployTx.address}`);
+  return parkingDeployTx.address;
 }
 
 async function start() {
@@ -33,6 +48,15 @@ async function start() {
   const sharedAddressPath = `${process.cwd()}/addresses/${args.chainId}.json`;
   // @ts-ignore
   const addressBook = JSON.parse(await fs.readFile(sharedAddressPath)) as AddressBook;
+
+
+  if (!addressBook.Parking) {
+    const networkOperator = wallet.address;
+
+    // Deploying Parking Contract
+    addressBook.Parking = await deployInterChainParking(wallet, gasPrice, networkOperator);
+  }
+
   if (addressBook.ClearingHouse) {
     throw new Error(
       `ClearingHouse already exists in address book at ${sharedAddressPath}. Please move it first so it is not overwritten`
