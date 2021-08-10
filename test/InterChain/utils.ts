@@ -258,7 +258,7 @@ export async function ParkingWithdrawConstuctor(
     {
       Withdraw: [
         { name: "token", type: "address" },
-        { name: "who", type: "address" },
+        { name: "to", type: "address" },
         {
           name: "value",
           type: "uint256",
@@ -269,7 +269,7 @@ export async function ParkingWithdrawConstuctor(
     },
     {
       token,
-      who,
+      to: who,
       value,
       nonce,
       deadline,
