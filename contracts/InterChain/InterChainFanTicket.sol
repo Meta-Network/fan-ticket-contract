@@ -21,10 +21,10 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
     bytes32 public constant _TRANFER_TYPEHASH =
         keccak256("Transfer(address from,address to,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant _BURN_PERMIT_TYPEHASH =
-        keccak256("Burn(address from,uint256 value,uint256 nonce,uint256 deadline)");
+        keccak256("Burn(address from,address to,uint256 value,uint256 nonce,uint256 deadline)");
 
     event InterChainFanTicketMint(address indexed who, uint256 value);
-    event InterChainFanTicketBurnt(address indexed who, uint256 value);
+    event InterChainFanTicketBurnt(address indexed who, address burntToTarget, uint256 value);
 
     address public managerRegistry;
 
@@ -49,6 +49,7 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
 
     function burnBySig(
         address from,
+        address to,
         uint256 amount,
         uint256 deadline,
         uint8 v,
@@ -57,7 +58,7 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
     ) public isSignatureNotDead(deadline) returns (bool) {
         // reuse the `nonce` property, as nonce only associated with the signer
         bytes32 structHash = keccak256(
-            abi.encode(_BURN_PERMIT_TYPEHASH, from, amount, _useNonce(from), deadline)
+            abi.encode(_BURN_PERMIT_TYPEHASH, from, to, amount, _useNonce(from), deadline)
         );
 
         bytes32 hash = _hashTypedDataV4(structHash);
@@ -66,7 +67,17 @@ contract InterChainFanTicket is IFanTicketV2, ERC20, ERC20Permit {
         require(signer == from, "InterChainFanPiao::burnBySig: invalid signature");
         _burn(from, amount);
 
-        emit InterChainFanTicketBurnt(from, amount);
+        emit InterChainFanTicketBurnt(from, to, amount);
+        return true;
+    }
+
+    function burn(
+        address to,
+        uint256 amount
+    ) public returns (bool) {
+        _burn(msg.sender, amount);
+
+        emit InterChainFanTicketBurnt(msg.sender, to, amount);
         return true;
     }
 
