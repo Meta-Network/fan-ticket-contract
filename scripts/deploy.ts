@@ -30,6 +30,17 @@ async function deployInterChainParking(wallet: Wallet, gasPrice: BigNumberish, n
   return parkingDeployTx.address;
 }
 
+async function deployClearingHouse(wallet: Wallet, gasPrice: BigNumberish) {
+  console.log('Deploying Clearing House...');
+  const clearingDeployTx = await new FanTicketClearingHouse__factory(
+    wallet
+  ).deploy({ gasPrice });
+  console.log(`Deploy TX: ${clearingDeployTx.deployTransaction.hash}`);
+  await clearingDeployTx.deployed();
+  console.log(`Clearing deployed at ${clearingDeployTx.address}`);
+  return clearingDeployTx.address;
+}
+
 async function start() {
   const args = require('minimist')(process.argv.slice(2));
 
@@ -55,6 +66,10 @@ async function start() {
 
     // Deploying Parking Contract
     addressBook.Parking = await deployInterChainParking(wallet, gasPrice, networkOperator);
+  }
+
+  if (!addressBook.ClearingHouse) {
+    addressBook.ClearingHouse = await deployClearingHouse(wallet, gasPrice)
   }
 
   if (addressBook.ClearingHouse) {
@@ -89,14 +104,6 @@ async function start() {
   console.log(`Factory deployed at ${factoryDeployTx.address}`);
   addressBook.Factory = factoryDeployTx.address;
 
-  console.log('Deploying Clearing House...');
-  const clearingDeployTx = await new FanTicketClearingHouse__factory(
-    wallet
-  ).deploy({ gasPrice });
-  console.log(`Deploy TX: ${clearingDeployTx.deployTransaction.hash}`);
-  await clearingDeployTx.deployed();
-  console.log(`Factory deployed at ${clearingDeployTx.address}`);
-  addressBook.ClearingHouse = clearingDeployTx.address;
 
   await fs.writeFile(sharedAddressPath, JSON.stringify(addressBook, null, 2));
   console.log(`Contracts deployed and configured. ☼☽`);
