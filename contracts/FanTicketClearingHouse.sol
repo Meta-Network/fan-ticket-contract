@@ -25,9 +25,31 @@ interface IERC20Sig {
     ) external returns (bool);
 }
 
+interface IICParking {
+    function deposit(
+        address token,
+        address sender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function withdraw(
+        address token,
+        address who,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+}
+
 
 contract FanTicketClearingHouse {
-    enum TxType { Transfer, Mint, Permit }
+    enum TxType { Transfer, Mint, Permit, InterChainDeposit, InterChainWithdraw }
     struct TransferOrder {
         address token;
         address from;
@@ -43,7 +65,15 @@ contract FanTicketClearingHouse {
     function handleTransferOrders(TransferOrder[] calldata orders) external {
         for (uint256 i = 0; i < orders.length; i++) {
             TransferOrder calldata order = orders[i];
-            if (order._type == TxType.Mint) {
+            if (order._type == TxType.InterChainDeposit) {
+                // reuse `order.to`
+                IICParking(order.to).deposit(order.token, order.from, order.value, order.deadline, order.v, order.r, order.s);
+            }
+            else if (order._type == TxType.InterChainWithdraw) {
+                // reuse `order.from`
+                IICParking(order.from).withdraw(order.token, order.to, order.value, order.deadline, order.v, order.r, order.s);
+            }
+            else if (order._type == TxType.Mint) {
                 IERC20Sig(order.token).mintBySig(order.from, order.to, order.value, order.deadline, order.v, order.r, order.s);
             }
             else if (order._type == TxType.Transfer) {
