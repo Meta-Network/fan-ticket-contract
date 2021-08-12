@@ -8,8 +8,8 @@ import { IInterChainParking } from "../interfaces/IInterChainParking.sol";
 
 
 contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
-    mapping(address => mapping(address => uint256))
-        public depositsForTokenAndOwner;
+    mapping(address => uint256) public depositsForToken;
+    // token address => receiver address => nonce
     mapping(address => mapping(address => uint256)) public withdrawNonces;
 
     bytes32 public constant _WITHDRAW_PERMIT_TYPEHASH =
@@ -44,7 +44,7 @@ contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
             s
         );
         // solidity 0.8 enable SafeMath by default
-        depositsForTokenAndOwner[token][sender] += value;
+        depositsForToken[token] += value;
     }
 
     function withdraw(
@@ -71,7 +71,7 @@ contract InterChainParking is IInterChainParking, AccessControl, EIP712 {
         address signer = ECDSA.recover(digest, v, r, s);
         require(hasRole(OPERATOR_ROLE, signer), "withdraw: Invalid signature");
         // solidity 0.8 enable SafeMath by default
-        depositsForTokenAndOwner[token][who] -= value;
+        depositsForToken[token] -= value;
         IERC20(token).transfer(who, value);
     }
 }

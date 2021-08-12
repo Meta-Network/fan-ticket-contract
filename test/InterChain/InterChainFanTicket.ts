@@ -160,9 +160,6 @@ describe("InterChain FanTicket v2", function () {
       parkingLot.deposit(fanTicket.address, tPermit.from, tPermit.value, tPermit.deadline, tPermit.v, tPermit.r, tPermit.s)
     ).to.be.not.reverted;
 
-    // good to query the balance
-    chai.expect(await parkingLot.depositsForTokenAndOwner(fanTicket.address, theOwner.address)).to.be.eq(targetAmount)
-
     const withdrawNonces = await parkingLot.withdrawNonces(fanTicket.address, theOwner.address);
 
     const pWithdrawPermit = await ParkingWithdrawConstuctor(parkingLot, fanTicket.address, networkAdmin, theOwner.address, targetAmount, withdrawNonces.toNumber())
